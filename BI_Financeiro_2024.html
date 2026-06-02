@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BI Financeiro 2024 — Empresa Genérica S.A.</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b111f;--bg2:#111827;--bg3:#1a2236;--card:#141d2e;
+  --border:rgba(255,255,255,0.07);--text:#e8edf7;--muted:#6b7fa3;
+  --accent:#2a6dd9;--accent2:#1db88a;--accent3:#e05a30;--gold:#f5c842;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* COVER */
+.cover{position:relative;width:100%;height:100vh;min-height:580px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
+canvas#bgCanvas{position:absolute;inset:0;width:100%;height:100%}
+.hud{position:absolute;inset:0;pointer-events:none;z-index:2}
+.hud-c{position:absolute;width:32px;height:32px;border-color:rgba(42,109,217,0.5);border-style:solid}
+.hud-tl{top:18px;left:18px;border-width:2px 0 0 2px}
+.hud-tr{top:18px;right:18px;border-width:2px 2px 0 0}
+.hud-bl{bottom:48px;left:18px;border-width:0 0 2px 2px}
+.hud-br{bottom:48px;right:18px;border-width:0 2px 2px 0}
+.scan-line{position:absolute;left:0;right:0;height:1px;background:rgba(42,109,217,0.15);animation:scan 6s linear infinite}
+@keyframes scan{0%{top:0;opacity:0.8}100%{top:100%;opacity:0}}
+
+.cover-content{position:relative;z-index:10;text-align:center;padding:0 24px}
+.cover-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:4px;color:var(--accent);text-transform:uppercase;margin-bottom:16px;animation:fadeUp .8s ease both}
+.cover-title{font-size:clamp(32px,6vw,68px);font-weight:300;color:var(--text);line-height:1.08;letter-spacing:-1.5px;animation:fadeUp .8s .15s ease both}
+.cover-title b{font-weight:700;color:var(--gold)}
+.cover-sub{font-size:14px;color:rgba(255,255,255,0.4);margin-top:12px;animation:fadeUp .8s .3s ease both;font-family:var(--mono)}
+.kpi-row{display:flex;gap:10px;justify-content:center;margin-top:24px;flex-wrap:wrap;animation:fadeUp .8s .45s ease both}
+.kpi-pill{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.65);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:100px;padding:6px 14px;display:flex;align-items:center;gap:7px;backdrop-filter:blur(4px)}
+.pdot{width:7px;height:7px;border-radius:50%}
+
+.ticker{position:absolute;bottom:0;left:0;right:0;height:36px;background:rgba(0,0,0,0.4);border-top:1px solid rgba(42,109,217,0.2);overflow:hidden;display:flex;align-items:center;z-index:10}
+.tick-inner{display:inline-flex;gap:44px;white-space:nowrap;animation:scrollX 22s linear infinite;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.45);padding-left:24px}
+.tup{color:#1db88a}.tdn{color:#e05a30}
+.scroll-cue{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);z-index:10;text-align:center;animation:fadeUp 1s 1s ease both}
+.scroll-cue span{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:rgba(255,255,255,0.25)}
+.scroll-arr{display:block;color:rgba(255,255,255,0.25);font-size:18px;margin-top:4px;animation:bounce 2s ease-in-out infinite}
+@keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scrollX{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+
+/* MAIN */
+.main{max-width:1100px;margin:0 auto;padding:64px 24px 80px}
+.sh{margin-bottom:28px}
+.sh-tag{font-family:var(--mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.sh-title{font-size:22px;font-weight:500;color:var(--text)}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:52px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px;transition:border-color .2s,transform .2s}
+.kpi:hover{border-color:rgba(42,109,217,0.35);transform:translateY(-3px)}
+.kpi-icon{font-size:22px;margin-bottom:10px}
+.kpi-lbl{font-size:11px;color:var(--muted);letter-spacing:.5px;margin-bottom:8px;font-family:var(--mono)}
+.kpi-val{font-size:28px;font-weight:600;color:var(--text);line-height:1}
+.kpi-dl{font-size:11px;margin-top:8px;padding:3px 10px;border-radius:100px;display:inline-flex;align-items:center;gap:4px;font-family:var(--mono)}
+.dup{background:rgba(29,184,138,.12);color:#1db88a}
+.ddn{background:rgba(224,90,48,.12);color:#e05a30}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px}
+.cc-wide{grid-column:1/-1}
+.cc-title{font-size:14px;font-weight:500;color:var(--text)}
+.cc-sub{font-size:11px;color:var(--muted);margin-top:2px;margin-bottom:16px;font-family:var(--mono)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.leg{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.ldot{width:10px;height:10px;border-radius:2px}
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:18px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-weight:400;padding:8px 12px;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:.5px;text-transform:uppercase;font-family:var(--mono)}
+td{padding:12px;color:var(--text);border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{font-size:11px;padding:3px 10px;border-radius:100px;font-family:var(--mono)}
+.b-up{background:rgba(29,184,138,.12);color:#1db88a}
+.b-dn{background:rgba(224,90,48,.12);color:#e05a30}
+.b-mid{background:rgba(201,146,42,.12);color:#c9922a}
+.bottom-row{display:grid;grid-template-columns:1.3fr 1fr;gap:18px}
+.donut-flex{display:flex;align-items:center;gap:20px}
+.dl{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-size:12px}
+.dl-bg{height:4px;background:rgba(255,255,255,.07);border-radius:2px;margin-top:4px}
+.dl-fill{height:4px;border-radius:2px}
+.dl-lbl{color:var(--muted)}
+.dl-val{color:var(--text);font-weight:500}
+.footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);color:var(--muted);font-size:12px;font-family:var(--mono)}
+@media(max-width:680px){.charts-row,.bottom-row{grid-template-columns:1fr}.cc-wide{grid-column:auto}}
+</style>
+</head>
+<body>
+
+<!-- CAPA ANIMADA -->
+<section class="cover">
+  <canvas id="bgCanvas"></canvas>
+  <div class="hud">
+    <div class="hud-c hud-tl"></div>
+    <div class="hud-c hud-tr"></div>
+    <div class="hud-c hud-bl"></div>
+    <div class="hud-c hud-br"></div>
+    <div class="scan-line"></div>
+  </div>
+
+  <div class="cover-content">
+    <div class="cover-eyebrow">Relatório Executivo · 2024</div>
+    <h1 class="cover-title">Dashboard <b>BI Financeiro</b></h1>
+    <p class="cover-sub">Empresa Genérica S.A. · Jan – Dez 2024</p>
+    <div class="kpi-row">
+      <div class="kpi-pill"><span class="pdot" style="background:#2a6dd9"></span>Receita R$ 4,2M</div>
+      <div class="kpi-pill"><span class="pdot" style="background:#1db88a"></span>Lucro R$ 1,8M</div>
+      <div class="kpi-pill"><span class="pdot" style="background:#f5c842"></span>Margem 42,1%</div>
+      <div class="kpi-pill"><span class="pdot" style="background:#e05a30"></span>EBITDA R$ 1,95M</div>
+    </div>
+  </div>
+
+  <div class="scroll-cue">
+    <span>ROLE PARA VER O RELATÓRIO</span>
+    <span class="scroll-arr">↓</span>
+  </div>
+
+  <div class="ticker">
+    <div class="tick-inner" id="ts"></div>
+  </div>
+</section>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="sh"><div class="sh-tag">Indicadores-chave</div><div class="sh-title">Resumo Executivo 2024</div></div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-icon">📈</div><div class="kpi-lbl">Receita Total</div><div class="kpi-val">R$ 4,2M</div><div class="kpi-dl dup">▲ 22% vs 2023</div></div>
+    <div class="kpi"><div class="kpi-icon">📉</div><div class="kpi-lbl">Despesas Totais</div><div class="kpi-val">R$ 2,4M</div><div class="kpi-dl ddn">▲ 8% vs 2023</div></div>
+    <div class="kpi"><div class="kpi-icon">💰</div><div class="kpi-lbl">Lucro Líquido</div><div class="kpi-val">R$ 1,8M</div><div class="kpi-dl dup">▲ 18,4% vs 2023</div></div>
+    <div class="kpi"><div class="kpi-icon">📊</div><div class="kpi-lbl">Margem Líquida</div><div class="kpi-val">42,1%</div><div class="kpi-dl dup">▲ 3,2pp vs 2023</div></div>
+    <div class="kpi"><div class="kpi-icon">⚡</div><div class="kpi-lbl">EBITDA</div><div class="kpi-val">R$ 1,95M</div><div class="kpi-dl dup">▲ 15,2% vs 2023</div></div>
+  </div>
+
+  <div class="sh" style="margin-top:40px"><div class="sh-tag">Análise Mensal</div><div class="sh-title">Receita, Despesa & Lucro</div></div>
+  <div class="charts-row">
+    <div class="chart-card cc-wide">
+      <div class="cc-title">Receita vs Despesa Mensal</div><div class="cc-sub">Jan – Dez 2024 · R$ mil</div>
+      <div class="legend"><div class="leg"><span class="ldot" style="background:#2a6dd9"></span>Receita</div><div class="leg"><span class="ldot" style="background:#e05a30"></span>Despesa</div><div class="leg"><span class="ldot" style="background:#1db88a"></span>Lucro</div></div>
+      <div style="position:relative;width:100%;height:260px"><canvas id="lineChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="cc-title">Lucro por Trimestre</div><div class="cc-sub">Q1–Q4 2024 · R$ mil</div>
+      <div class="legend"><div class="leg"><span class="ldot" style="background:#1db88a"></span>Lucro</div></div>
+      <div style="position:relative;width:100%;height:220px"><canvas id="barChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="cc-title">Composição da Receita</div><div class="cc-sub">Por segmento · 2024</div>
+      <div class="donut-flex">
+        <div style="position:relative;width:130px;height:130px;flex-shrink:0"><canvas id="donutChart"></canvas></div>
+        <div style="flex:1">
+          <div class="dl"><div><div class="dl-lbl">Produtos</div><div class="dl-bg"><div class="dl-fill" style="width:90%;background:#2a6dd9"></div></div></div><span class="dl-val">45%</span></div>
+          <div class="dl"><div><div class="dl-lbl">Serviços</div><div class="dl-bg"><div class="dl-fill" style="width:60%;background:#1db88a"></div></div></div><span class="dl-val">30%</span></div>
+          <div class="dl"><div><div class="dl-lbl">Recorrente</div><div class="dl-bg"><div class="dl-fill" style="width:36%;background:#c9922a"></div></div></div><span class="dl-val">18%</span></div>
+          <div class="dl"><div><div class="dl-lbl">Outros</div><div class="dl-bg"><div class="dl-fill" style="width:14%;background:#6b7fa3"></div></div></div><span class="dl-val">7%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sh" style="margin-top:40px"><div class="sh-tag">Histórico</div><div class="sh-title">Evolução 5 Anos</div></div>
+  <div class="chart-card" style="margin-bottom:18px">
+    <div class="cc-title">Receita, Lucro e Despesa — 2020 a 2024</div><div class="cc-sub">Valores em R$ milhões</div>
+    <div class="legend"><div class="leg"><span class="ldot" style="background:#2a6dd9"></span>Receita</div><div class="leg"><span class="ldot" style="background:#1db88a"></span>Lucro</div><div class="leg"><span class="ldot" style="background:#e05a30"></span>Despesa</div></div>
+    <div style="position:relative;width:100%;height:240px"><canvas id="areaChart"></canvas></div>
+  </div>
+
+  <div class="sh" style="margin-top:40px"><div class="sh-tag">Gestão de Custos</div><div class="sh-title">Top Centros de Custo</div></div>
+  <div class="table-card">
+    <table>
+      <thead><tr><th>#</th><th>Centro de Custo</th><th>Valor</th><th>% Total</th><th>Variação</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td style="color:var(--muted)">01</td><td>Operações</td><td>R$ 720k</td><td>30%</td><td><span class="badge b-dn">▲ 12%</span></td><td><span class="badge b-dn">Atenção</span></td></tr>
+        <tr><td style="color:var(--muted)">02</td><td>Marketing & Vendas</td><td>R$ 540k</td><td>22,5%</td><td><span class="badge b-mid">▲ 5%</span></td><td><span class="badge b-mid">Monitorar</span></td></tr>
+        <tr><td style="color:var(--muted)">03</td><td>TI & Infraestrutura</td><td>R$ 390k</td><td>16,3%</td><td><span class="badge b-up">▼ 3%</span></td><td><span class="badge b-up">Ótimo</span></td></tr>
+        <tr><td style="color:var(--muted)">04</td><td>Recursos Humanos</td><td>R$ 310k</td><td>12,9%</td><td><span class="badge b-mid">▲ 2%</span></td><td><span class="badge b-mid">Normal</span></td></tr>
+        <tr><td style="color:var(--muted)">05</td><td>Financeiro</td><td>R$ 180k</td><td>7,5%</td><td><span class="badge b-up">▼ 6%</span></td><td><span class="badge b-up">Ótimo</span></td></tr>
+        <tr><td style="color:var(--muted)">06</td><td>Jurídico & Compliance</td><td>R$ 140k</td><td>5,8%</td><td><span class="badge b-up">▼ 1%</span></td><td><span class="badge b-up">Normal</span></td></tr>
+        <tr><td style="color:var(--muted)">07</td><td>Outros</td><td>R$ 120k</td><td>5,0%</td><td><span class="badge b-mid">▲ 0%</span></td><td><span class="badge b-mid">Normal</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<footer class="footer">Dashboard BI Financeiro 2024 · Empresa Genérica S.A. · Junho 2025 · Confidencial</footer>
+
+<script>
+/* ── TICKER ── */
+const ticks=['Receita Bruta <span class="tup">▲ R$ 4,2M</span>','Lucro Líquido <span class="tup">▲ 18,4%</span>','EBITDA <span class="tup">▲ R$ 1,95M</span>','Inadimplência <span class="tdn">▼ 2,3%</span>','Margem Bruta <span class="tup">▲ 42,1%</span>','ROE <span class="tup">▲ 24,7%</span>','CAC <span class="tup">R$ 312</span>','LTV/CAC <span class="tup">30,1x</span>','NPS <span class="tup">▲ 72</span>','Receita Bruta <span class="tup">▲ R$ 4,2M</span>','Lucro Líquido <span class="tup">▲ 18,4%</span>','EBITDA <span class="tup">▲ R$ 1,95M</span>'];
+document.getElementById('ts').innerHTML=ticks.join('<span style="color:rgba(255,255,255,0.12);margin:0 4px">·</span>');
+
+/* ── CANVAS ANIMATION ── */
+(function(){
+const canvas=document.getElementById('bgCanvas');
+const ctx=canvas.getContext('2d');
+let W,H,frame=0,objects=[];
+function resize(){const r=canvas.parentElement.getBoundingClientRect();W=canvas.width=r.width;H=canvas.height=r.height}
+resize();window.addEventListener('resize',resize);
+const TAU=Math.PI*2;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+function drawGrid(){
+  ctx.strokeStyle='rgba(42,109,217,0.055)';ctx.lineWidth=1;
+  const g=40;
+  for(let x=0;x<W;x+=g){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=g){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+}
+
+class BarChart{
+  constructor(){this.init()}
+  init(){
+    this.x=rnd(-60,W+60);this.y=rnd(H*.15,H*.7);
+    this.w=rnd(55,95);this.n=Math.floor(rnd(4,7));
+    this.bars=Array.from({length:this.n},()=>rnd(12,52));
+    this.vx=rnd(-.5,.5);this.vy=rnd(-.4,.4);
+    this.alpha=0;this.life=0;this.max=rnd(220,360);
+    this.col=Math.random()>.5?'42,109,217':'29,184,138';
+  }
+  tick(){
+    this.x+=this.vx;this.y+=this.vy;this.life++;
+    this.alpha=this.life<30?this.life/30*.55:this.life>this.max-30?(this.max-this.life)/30*.55:.55;
+    if(this.life>this.max)this.init();
+  }
+  draw(){
+    ctx.save();ctx.globalAlpha=this.alpha;
+    const bw=this.w/this.n*.65,gap=this.w/this.n*.35;
+    this.bars.forEach((h,i)=>{
+      ctx.fillStyle=`rgba(${this.col},${0.5+i/this.n*.4})`;
+      ctx.beginPath();ctx.roundRect(this.x+i*(bw+gap),this.y-h,bw,h,2);ctx.fill();
+    });
+    ctx.restore();
+  }
+}
+
+class LineGraph{
+  constructor(){this.init()}
+  init(){
+    this.x=rnd(-80,W*.4);this.y=rnd(H*.2,H*.75);
+    this.pts=Array.from({length:Math.floor(rnd(6,11))},(_,i)=>({x:i*22,y:rnd(-35,35)}));
+    this.vx=rnd(.3,.75);this.vy=rnd(-.3,.3);
+    this.alpha=0;this.life=0;this.max=rnd(200,360);
+    this.col=Math.random()>.5?'42,109,217':'245,200,66';
+  }
+  tick(){
+    this.x+=this.vx;this.y+=this.vy;this.life++;
+    this.alpha=this.life<40?this.life/40*.5:this.life>this.max-40?(this.max-this.life)/40*.5:.5;
+    if(this.life>this.max||this.x>W+120)this.init();
+  }
+  draw(){
+    ctx.save();ctx.globalAlpha=this.alpha;
+    ctx.strokeStyle=`rgba(${this.col},.85)`;ctx.lineWidth=1.5;ctx.lineJoin='round';
+    ctx.beginPath();
+    this.pts.forEach((p,i)=>{i===0?ctx.moveTo(this.x+p.x,this.y+p.y):ctx.lineTo(this.x+p.x,this.y+p.y)});
+    ctx.stroke();
+    this.pts.forEach(p=>{
+      ctx.beginPath();ctx.arc(this.x+p.x,this.y+p.y,2.5,0,TAU);
+      ctx.fillStyle=`rgba(${this.col},1)`;ctx.fill();
+    });
+    ctx.restore();
+  }
+}
+
+class Coin{
+  constructor(){this.init()}
+  init(){
+    this.x=rnd(20,W-20);this.y=rnd(-40,-5);
+    this.r=rnd(8,18);this.vy=rnd(.6,1.5);this.vx=rnd(-.3,.3);
+    this.rot=rnd(0,TAU);this.rv=rnd(-.04,.04);
+    this.alpha=0;this.life=0;this.max=rnd(160,300);
+  }
+  tick(){
+    this.x+=this.vx;this.y+=this.vy;this.rot+=this.rv;this.life++;
+    this.alpha=Math.min(this.life/20,(this.max-this.life)/30,1)*.7;
+    if(this.life>this.max)this.init();
+  }
+  draw(){
+    ctx.save();ctx.globalAlpha=this.alpha;
+    ctx.translate(this.x,this.y);ctx.rotate(this.rot);
+    ctx.scale(Math.abs(Math.cos(frame*.04)),1);
+    ctx.beginPath();ctx.arc(0,0,this.r,0,TAU);
+    ctx.fillStyle='rgba(245,200,66,.2)';ctx.fill();
+    ctx.strokeStyle='rgba(245,200,66,.85)';ctx.lineWidth=1.3;ctx.stroke();
+    ctx.fillStyle='rgba(245,200,66,.95)';
+    ctx.font=`bold ${Math.round(this.r*.9)}px monospace`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('$',0,0);
+    ctx.restore();
+  }
+}
+
+class Donut{
+  constructor(){this.init()}
+  init(){
+    this.x=rnd(30,W-30);this.y=rnd(30,H-40);
+    this.r=rnd(16,30);this.vx=rnd(-.4,.4);this.vy=rnd(-.4,.4);
+    this.rot=rnd(0,TAU);this.rv=rnd(-.009,.009);
+    this.alpha=0;this.life=0;this.max=rnd(240,420);
+    this.segs=[.45,.30,.18,.07];
+    this.cols=['42,109,217','29,184,138','201,146,42','107,127,163'];
+  }
+  tick(){
+    this.x+=this.vx;this.y+=this.vy;this.rot+=this.rv;this.life++;
+    this.alpha=this.life<50?this.life/50*.55:this.life>this.max-50?(this.max-this.life)/50*.55:.55;
+    if(this.life>this.max)this.init();
+  }
+  draw(){
+    ctx.save();ctx.globalAlpha=this.alpha;
+    ctx.translate(this.x,this.y);ctx.rotate(this.rot);
+    let s=0;
+    this.segs.forEach((seg,i)=>{
+      const e=s+seg*TAU;
+      ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,this.r,s,e);ctx.closePath();
+      ctx.fillStyle=`rgba(${this.cols[i]},.6)`;ctx.fill();
+      s=e;
+    });
+    ctx.beginPath();ctx.arc(0,0,this.r*.55,0,TAU);
+    ctx.fillStyle='#08101e';ctx.fill();
+    ctx.restore();
+  }
+}
+
+class Particle{
+  constructor(){this.init()}
+  init(){
+    this.x=rnd(0,W);this.y=rnd(0,H);
+    this.r=rnd(.8,2.8);this.vx=rnd(-.3,.3);this.vy=rnd(-.7,-.1);
+    this.alpha=rnd(.08,.35);this.life=0;this.max=rnd(100,240);
+    this.col=Math.random()>.6?'42,109,217':Math.random()>.5?'29,184,138':'245,200,66';
+  }
+  tick(){this.x+=this.vx;this.y+=this.vy;this.life++;if(this.life>this.max||this.y<-8)this.init()}
+  draw(){
+    ctx.save();ctx.globalAlpha=this.alpha*(1-this.life/this.max);
+    ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,TAU);
+    ctx.fillStyle=`rgba(${this.col},1)`;ctx.fill();
+    ctx.restore();
+  }
+}
+
+class DataLabel{
+  constructor(){this.init()}
+  init(){
+    const l=['R$ 4,2M','▲ 22%','42,1%','R$ 1,8M','Q4 ▲','EBITDA','ROE 24%','NOI ▲','▲ 18%','+R$580k'];
+    this.text=l[Math.floor(Math.random()*l.length)];
+    this.x=rnd(40,W-90);this.y=rnd(60,H-80);
+    this.vx=rnd(-.25,.25);this.vy=rnd(-.4,.1);
+    this.alpha=0;this.life=0;this.max=rnd(160,280);
+    this.col=Math.random()>.5?'29,184,138':'42,109,217';
+  }
+  tick(){
+    this.x+=this.vx;this.y+=this.vy;this.life++;
+    this.alpha=this.life<40?this.life/40*.35:this.life>this.max-40?(this.max-this.life)/40*.35:.35;
+    if(this.life>this.max)this.init();
+  }
+  draw(){
+    ctx.save();ctx.globalAlpha=this.alpha;
+    ctx.font='bold 11px monospace';
+    ctx.fillStyle=`rgba(${this.col},1)`;
+    ctx.fillText(this.text,this.x,this.y);
+    ctx.restore();
+  }
+}
+
+for(let i=0;i<6;i++)objects.push(new BarChart());
+for(let i=0;i<5;i++)objects.push(new LineGraph());
+for(let i=0;i<9;i++)objects.push(new Coin());
+for(let i=0;i<4;i++)objects.push(new Donut());
+for(let i=0;i<32;i++)objects.push(new Particle());
+for(let i=0;i<7;i++)objects.push(new DataLabel());
+
+function loop(){
+  frame++;ctx.clearRect(0,0,W,H);drawGrid();
+  objects.forEach(o=>{o.tick();o.draw()});
+  requestAnimationFrame(loop);
+}
+loop();
+})();
+
+/* ── CHARTS ── */
+Chart.defaults.color='#6b7fa3';Chart.defaults.font.family="'DM Sans',sans-serif";Chart.defaults.font.size=11;
+const months=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const receita=[280,310,295,360,380,420,400,450,470,510,530,580];
+const despesa=[190,200,185,210,220,230,215,240,250,260,265,280];
+const lucro=receita.map((r,i)=>r-despesa[i]);
+new Chart(document.getElementById('lineChart'),{type:'line',data:{labels:months,datasets:[{label:'Receita',data:receita,borderColor:'#2a6dd9',backgroundColor:'rgba(42,109,217,.08)',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:'#2a6dd9'},{label:'Despesa',data:despesa,borderColor:'#e05a30',backgroundColor:'rgba(224,90,48,.06)',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:'#e05a30',borderDash:[5,3]},{label:'Lucro',data:lucro,borderColor:'#1db88a',backgroundColor:'rgba(29,184,138,.08)',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:'#1db88a'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{autoSkip:false}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>'R$'+v+'k'}}}}});
+new Chart(document.getElementById('barChart'),{type:'bar',data:{labels:['Q1','Q2','Q3','Q4'],datasets:[{label:'Lucro',data:[280,390,490,640],backgroundColor:['rgba(29,184,138,.5)','rgba(29,184,138,.65)','rgba(29,184,138,.8)','rgba(29,184,138,1)'],borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>'R$'+v+'k'}}}}});
+new Chart(document.getElementById('donutChart'),{type:'doughnut',data:{labels:['Produtos','Serviços','Recorrente','Outros'],datasets:[{data:[45,30,18,7],backgroundColor:['#2a6dd9','#1db88a','#c9922a','#6b7fa3'],borderWidth:3,borderColor:'#141d2e',hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.parsed+'%'}}}}});
+new Chart(document.getElementById('areaChart'),{type:'line',data:{labels:['2020','2021','2022','2023','2024'],datasets:[{label:'Receita',data:[1.8,2.2,2.8,3.4,4.2],borderColor:'#2a6dd9',backgroundColor:'rgba(42,109,217,.12)',tension:.4,fill:true,pointRadius:6,pointBackgroundColor:'#2a6dd9',pointBorderColor:'#141d2e',pointBorderWidth:2},{label:'Lucro',data:[.5,.7,1,1.4,1.8],borderColor:'#1db88a',backgroundColor:'rgba(29,184,138,.08)',tension:.4,fill:true,pointRadius:6,pointBackgroundColor:'#1db88a',pointBorderColor:'#141d2e',pointBorderWidth:2},{label:'Despesa',data:[1.3,1.5,1.8,2,2.4],borderColor:'#e05a30',backgroundColor:'rgba(224,90,48,.06)',tension:.4,fill:true,pointRadius:6,pointBackgroundColor:'#e05a30',pointBorderColor:'#141d2e',pointBorderWidth:2,borderDash:[6,3]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>'R$'+v+'M'}}}}});
+</script>
+</body>
+</html>
